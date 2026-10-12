@@ -31,3 +31,6 @@ jobs:
               --title "Whisper model (download mirror)" \
               --notes "Mirror of $FILE from huggingface.co/ggerganov/whisper.cpp (MIT license). ReelsStudio downloads it from here when Hugging Face is unreachable. Not an app release."
           gh release upload "$TAG" "$FILE" --repo "$GITHUB_REPOSITORY" --clobber
+          # gh is silent on success; print what the release now holds
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets \
+            --jq '.assets[] | "uploaded: \(.name) \(.size) bytes"'
