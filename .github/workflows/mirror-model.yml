@@ -1,0 +1,33 @@
+# Copy of .github/workflows/mirror-model.yml in mehrabsha/reelsstudio-releases (that copy is the one that runs).
+# Copies the Whisper model from Hugging Face into the `model-large-v3-turbo-q5_0` prerelease on GitHub's own runner,
+# so nothing goes through your connection. The app falls back to that copy (MODEL_URLS in
+# src/main/services/modelDownload.ts). Trigger with `npm run release -- --model`.
+name: Mirror Whisper model
+
+on: workflow_dispatch
+
+permissions:
+  contents: write
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    env:
+      TAG: model-large-v3-turbo-q5_0
+      FILE: ggml-large-v3-turbo-q5_0.bin
+      SHA256: 394221709cd5ad1f40c46e6031ca61bce88931e6e088c188294c6d5a55ffa7e2
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Download from Hugging Face and verify
+        run: |
+          curl -fL --retry 5 -o "$FILE" "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/$FILE"
+          echo "$SHA256  $FILE" | sha256sum -c
+
+      - name: Upload to the mirror release
+        run: |
+          # a prerelease that is never "latest", so electron-updater never takes it for an app version
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 ||
+            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --prerelease --latest=false \
+              --title "Whisper model (download mirror)" \
+              --notes "Mirror of $FILE from huggingface.co/ggerganov/whisper.cpp (MIT license). ReelsStudio downloads it from here when Hugging Face is unreachable. Not an app release."
+          gh release upload "$TAG" "$FILE" --repo "$GITHUB_REPOSITORY" --clobber
